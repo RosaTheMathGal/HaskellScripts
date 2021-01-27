@@ -2,34 +2,40 @@ module ProductGenerator where
 
 import Data.List
 
-solutions :: [Int] -> [[(Int, (Int,Int))]]
+newtype DivisorAndFactors = DivisorAndFactors (Int, (Int, Int)) deriving (Eq,Ord)
+
+instance Show DivisorAndFactors where
+  show (DivisorAndFactors (divisor, (factor1, factor2))) =
+    (show divisor) ++ " divides " ++ (show factor1) ++ "(" ++ (show factor2) ++ ")"
+
+solutions :: [Int] -> [[DivisorAndFactors]]
 solutions list =
   map (\x -> solutionSet x list) $ primeless list
 
-solutionSet :: Int -> [Int] -> [(Int,(Int,Int))]
+solutionSet :: Int -> [Int] -> [DivisorAndFactors]
 solutionSet a list =
-  sort $ orderSolutions $ pruneSolutions $ filter trueSol $ divisibleProducts a list
+  sort . orderSolutions . pruneSolutions . filter trueSol $ divisibleProducts a list
     where
-    trueSol (i,(j,k)) = (i `divs` j == False) &&
+    trueSol (DivisorAndFactors (i,(j,k))) = (i `divs` j == False) &&
                         (i `divs` k == False)
 
-orderSolutions :: [(Int,(Int,Int))] -> [(Int,(Int,Int))]
+orderSolutions :: [DivisorAndFactors] -> [DivisorAndFactors]
 orderSolutions [] = []
-orderSolutions ((i,(j,k)):xs) =
+orderSolutions ((DivisorAndFactors (i,(j,k))) : xs) =
   if k < j
-  then (i,(k,j)) : orderSolutions xs
-  else (i,(j,k)) : orderSolutions xs
+  then (DivisorAndFactors (i,(k,j))) : orderSolutions xs
+  else (DivisorAndFactors (i,(j,k))) : orderSolutions xs
 
-pruneSolutions :: [(Int,(Int,Int))] -> [(Int,(Int,Int))]
+pruneSolutions :: [DivisorAndFactors] -> [DivisorAndFactors]
 pruneSolutions []             = []
-pruneSolutions ((i,(j,k)):xs) =
-  if j == k || not  ((i,(k,j)) `elem` xs)
-  then (i,(j,k)) : pruneSolutions xs
+pruneSolutions ((DivisorAndFactors (i,(j,k))) : xs) =
+  if j == k || not  ((DivisorAndFactors (i,(k,j))) `elem` xs)
+  then (DivisorAndFactors (i,(j,k))) : pruneSolutions xs
   else pruneSolutions xs
 
-divisibleProducts :: Int -> [Int] -> [(Int,(Int,Int))]
+divisibleProducts :: Int -> [Int] -> [DivisorAndFactors]
 divisibleProducts a list =
-  zip (cycle [a]) $ filter divsByA $ divHelper list
+  map (DivisorAndFactors) $ zip (cycle [a]) $ filter divsByA $ divHelper list
     where
     divsByA (m,n)    = a `divs` (m*n)
     divHelper list   = foldl (++) [] $ map constructTuple list
@@ -49,17 +55,3 @@ primeless list =
 primeGen :: [Int] -> [Int]
 primeGen [] = []
 primeGen (x:xs) = x : (primeGen $ filter (\n -> x `divs` n == False) xs)
-
-products :: [Int] -> [Int]
-products list = 
-  sort $ removeDups $ productHelper list
-    where
-    productHelper list = foldl (++) [] $ map multiplyByN list
-    multiplyByN n      = map (n *) list
-
-removeDups :: [Int] -> [Int]
-removeDups [] = []
-removeDups (x:xs) =
-  if x `elem` xs
-  then removeDups xs
-  else x:removeDups xs
